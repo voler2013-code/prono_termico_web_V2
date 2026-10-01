@@ -1,0 +1,32 @@
+VERIFICACIÓN DE LA VERSIÓN SKEW-T
+
+Base: prono_termico_pwa_calendario_v3.zip, recuperada del proyecto anterior.
+
+- Formulario HTML original comparado: lugares, coordenadas, fechas, horas,
+  condiciones del suelo y botones conservados.
+- requests.py, manifest e íconos: idénticos a la base.
+- Solicitud: 31 presiones de 1000 a 250 hPa cada 25, más superficie.
+  96 variables por modelo (T, HR, geopotenciales y presión superficial).
+- Consulta real a Open-Meteo, SJ, 01/10/2026: respondieron los siete modelos.
+  Niveles recibidos con T + HR, antes de interpolar localmente:
+  ICON 13/31; GFS 31/31; Météo-France 18/31; ECMWF IFS 0/31;
+  UKMO 21/31; GEM 19/31; CMA 19/31.
+  Esto no identifica interpolación que la API pudiera realizar internamente.
+  ECMWF puede aportar T aunque no aporte HR en altura.
+- Tres perfiles (09, 12, 15): alcanzan 250 hPa; 30 puntos visibles por perfil
+  tras excluir presiones bajo la superficie e incorporar el punto a 2 m.
+- Chromium con Pyodide 0.28.3 real: arranque y cálculo Python en worker.
+  Para probar la interfaz se reprodujeron las respuestas reales descargadas
+  de la API; así se evitó consultar otra vez siete modelos por cada prueba.
+- Tres tablas + tres SVG, zoom, inspector, Limpiar, coordenadas con coma
+  decimal y Td/T manuales: comprobados en navegador.
+- Pantallas de 1280 px y 390 px: revisión visual; sin desbordamiento horizontal.
+- Resultado sin max-height: confirmado.
+- IDs de recorte SVG únicos para que los gráficos de varias horas no se mezclen.
+- Actualización desde la caché v3 a v4: verificada tras cerrar/reabrir la página.
+  Archivos nuevos cacheados; se conserva la caché de aplicaciones ajenas.
+- No se probó en un teléfono Android físico. El gesto de dos dedos está
+  implementado; no se afirma una validación táctil en hardware real.
+
+Las pruebas verifican la ejecución y presentación, no la exactitud de los
+pronósticos. Se preservaron las fórmulas y medianas del proyecto base.
