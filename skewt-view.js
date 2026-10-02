@@ -26,7 +26,7 @@ export function renderSondeos(output, blocks) {
       svg.classList.add("skewt-chart");
       const readout = document.createElement("p");
       readout.className = "skewt-readout";
-      readout.textContent = "Tocá un nivel para leer T, Td y altura. Arrastrá para desplazar; dos dedos o +/− para ampliar.";
+      readout.textContent = "Tocá un nivel para leer T, Td, humedad y altura. Arrastrá para desplazar; dos dedos o +/− para ampliar.";
       const chart = new window.SkewT(svg, readout);
       chart.fitPoints = allPoints;
       const button = (label, fn, ariaLabel) => {
@@ -49,16 +49,12 @@ export function renderSondeos(output, blocks) {
         input.addEventListener("change", () => {chart.layers[key] = input.checked;chart.draw();});
         label.append(input, document.createTextNode(labelText)); layers.append(label);
       }
-      const info = document.createElement("p");
-      info.className = "skewt-info";
       const count = profile.modelos?.length || 0;
-      info.textContent = `${count}/7 respuestas de modelos · ${profile.puntos.length} puntos visibles · 1000–250 hPa solicitados. ` +
-        "Medianas; círculos blancos: incluye interpolación local. Alturas de la tabla: referencias aproximadas. Alturas del modelo: al tocar el gráfico.";
       const coverage = document.createElement("details");
       coverage.className = "skewt-coverage";
-      const summary = document.createElement("summary"); summary.textContent = "Niveles recibidos por modelo";
+      const summary = document.createElement("summary"); summary.textContent = `Niveles recibidos por modelo, ${count}/7 respuestas de modelos`;
       const list = document.createElement("ul");
-      const models = ["icon_seamless", "gfs_seamless", "meteofrance_seamless", "ecmwf_ifs", "ukmo_seamless", "gem_seamless", "cma_grapes_global"];
+      const models = ["icon_seamless", "gfs_seamless", "meteofrance_seamless", "ecmwf_ifs025", "ukmo_seamless", "gem_seamless", "cma_grapes_global"];
       for (const model of models) {
         const li = document.createElement("li");
         const n = profile.cobertura?.[model];
@@ -66,7 +62,8 @@ export function renderSondeos(output, blocks) {
         list.append(li);
       }
       coverage.append(summary, list);
-      section.append(header, legend, svg, layers, readout, info, coverage);
+      header.insertBefore(legend, header.querySelector("button"));
+      section.append(header, svg, layers, readout, coverage);
       chart.setData(profile.puntos);
     }
     output.append(section);

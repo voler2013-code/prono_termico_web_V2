@@ -2,7 +2,7 @@
 """
 Script: prono_termico3.py
 Pronóstico térmico usando Open-Meteo Customer API.
-Modelos: icon_seamless, gfs_seamless, meteofrance_seamless, ecmwf_ifs,
+Modelos: icon_seamless, gfs_seamless, meteofrance_seamless, ecmwf_ifs025,
          ukmo_seamless, gem_seamless, cma_grapes_global
 
 AL ACABARSE LA API PAGA HAY QUE VOLVER A LA GRATIS EL CODIGO, Y ESTA FUNCIONA MAS A LA NOCHE CON MENOS CONGESTION
@@ -175,7 +175,7 @@ MODELOS: Dict[str, Dict[str, List[str]]] = {
     "meteofrance_seamless": {
         "vars": TODAS_LAS_VARIABLES.copy()
     },
-    "ecmwf_ifs": {
+    "ecmwf_ifs025": {
         "vars": TODAS_LAS_VARIABLES.copy()
     },
     "ukmo_seamless": {
@@ -773,7 +773,7 @@ def procesar_consulta(query: str):
     print()
     print(cabecera)
 
-    alturas_out = sorted(alturas_ordenadas, reverse=True)
+    alturas_out = sorted((h for h in alturas_ordenadas if h <= 4900), reverse=True)
 
     def fmt_int(x: Optional[float]) -> str:
         return "" if x is None or not valor_valido(x) else f"{int(round(float(x)))}"

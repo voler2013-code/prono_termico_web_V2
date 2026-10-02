@@ -54,7 +54,8 @@ def crear_perfil(stats, elevacion, modelos, indices, levels, fecha, hora,
     if valido(t2m) and valido(td2m):
         puntos.insert(0, dict(p=p_superficie, t=t2m, td=td2m, z=elevacion+2,
                               z_ref=elevacion+2, n=len(indices), superficie=True,
-                              presion_estimada=estimada))
+                              presion_estimada=estimada,
+                              rh=stats.get(2, {}).get("RH_median")))
     return dict(fecha=fecha, hora=hora, lugar=lugar, lat=lat, lon=lon,
                 elevacion=elevacion, modelos=list(indices), puntos=puntos,
                 cobertura={m: sum(1 for n, _, vt, vr in levels if n != '2m'

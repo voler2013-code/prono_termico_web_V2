@@ -258,11 +258,11 @@ input:disabled {
 #output { white-space: normal; padding: 0; }
 .sondeo-block + .sondeo-block { border-top: 2px solid var(--border); margin-top: 22px; }
 .sondeo-table { margin: 0; padding: 12px 10px 18px; font: inherit; line-height: 1.28; white-space: pre; overflow-x: auto; }
-.skewt-toolbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border); font: .85rem system-ui, sans-serif; }
-.skewt-toolbar strong { margin-right: auto; }
+.skewt-toolbar { display: flex; align-items: center; gap: 8px; padding: 4px 10px; white-space: nowrap; overflow-x: auto; border-top: 1px solid var(--border); font: .85rem system-ui, sans-serif; }
+.skewt-toolbar strong { flex: 0 0 auto; }
 .skewt-toolbar button { min-width: 38px; min-height: 40px; }
 .skewt-chart { display: block; width: 100%; aspect-ratio: 1000 / 950; background: white; touch-action: none; cursor: crosshair; }
-.skewt-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 0 12px; font: .8rem system-ui, sans-serif; }
+.skewt-legend { display: flex; flex: 0 0 auto; gap: 14px; padding: 0; margin: 0 auto 0 0; font: .8rem system-ui, sans-serif; }
 .skewt-t { color: #ff888b; } .skewt-td { color: #86b2ff; }
 .skewt-layers { display: flex; flex-wrap: wrap; gap: 4px 12px; padding: 9px 12px; }
 .skewt-layers label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font: .75rem system-ui, sans-serif; }
@@ -282,4 +282,12 @@ input:disabled {
 @media (min-width: 900px) {
   .sondeo-block { padding: 12px 24px 20px; }
   .skewt-chart { width: min(100%, 1050px); margin: 0 auto; }
+}
+
+/* Cabecera en una línea; en pantallas muy estrechas permite desplazamiento. */
+.skewt-toolbar button { flex: 0 0 auto; }
+@media (max-width: 600px) {
+  .skewt-toolbar { gap: 4px; padding: 3px 5px; font-size: 10px; }
+  .skewt-legend { gap: 5px; font-size: 9px; }
+  .skewt-toolbar button { min-width: 22px; min-height: 36px; padding: 4px 3px; }
 }

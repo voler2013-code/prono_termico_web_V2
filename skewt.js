@@ -35,7 +35,7 @@ let chartCounter = 0;
 class SkewT {
  constructor(svg,readout){
   this.svg=svg;svg._skewt=this;this.readout=readout;this.clipId="skewt-clip-"+(++chartCounter);this.tr=new Transform();this.points=[];
-  this.layers={dry:true,moist:true,mix:false,altitude:false};
+  this.layers={dry:true,moist:true,mix:true,altitude:true};
   svg.setAttribute('viewBox','0 0 1000 950');svg.setAttribute('role','img');
   svg.setAttribute('aria-label','Diagrama Skew-T: temperatura roja y punto de rocío azul');
   svg.setAttribute('tabindex','0');
@@ -77,7 +77,7 @@ class SkewT {
   const compact=displayWidth<600,labelSize=Math.min(32,Math.max(16,11000/displayWidth));
   let body='',labels='';const line=(x1,y1,x2,y2,c,w=1)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}"/>`;
   const text=(x,y,t,anchor='middle',fill='#596579')=>`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${fill}" font-size="${labelSize}" font-family="system-ui">${esc(t)}</text>`;
-  for(let t=-160;t<=100;t+=10){body+=this.path([[1100,t],[150,t]],'#f0bebe',t%20===0?1.4:.8);const u=-this.tr.oy,x=10*this.tr.s*t-this.tr.ox+u;if(x>=0&&x<=800)labels+=text(x,830,t);}
+  for(let t=-160;t<=100;t+=5){body+=this.path([[1100,t],[150,t]],'#f0bebe',t%20===0?1.4:.8);const u=-this.tr.oy,x=10*this.tr.s*t-this.tr.ox+u;if(x>=0&&x<=800)labels+=text(x,830,t);}
   for(let p=100;p<=1050;p+=50){const y=this.tr.project(p,0)[1];if(y<0||y>800)continue;body+=line(0,y,800,y,'#cbd7e2',p%100===0?1.3:.6);if(!compact||p%100===0||p===250)labels+=text(-12,y+6,p,'end');}
   if(this.layers.altitude)for(let z=compact?1000:500;z<=15000;z+=compact?1000:500){const y=this.tr.project(pressure(z),0)[1];if(y<8||y>790)continue;body+=line(0,y,800,y,'#bcbcf1',.8);labels+=text(810,y+5,(z/1000).toFixed(1),'start','#6666aa');}
   if(this.layers.dry)for(let t=-30;t<=100;t+=10){let pts=[];const z0=altitude(1000)/.3048;for(let f=z0;f<50000;f+=1000)pts.push([pressure(f*.3048),t-(f-z0)/1000*2.9870399044147233]);body+=this.path(pts,'#b7dfb6',1);}
@@ -86,14 +86,15 @@ class SkewT {
   body+=this.path(this.points.map(v=>[v.p,v.t]),'#df363c',3.2);
   body+=this.path(this.points.map(v=>[v.p,v.td]),'#275ce6',3.2);
   for(const v of this.points){for(const [key,color] of [['t','#df363c'],['td','#275ce6']]){const [x,y]=this.tr.project(v.p,v[key]);body+=`<circle cx="${x}" cy="${y}" r="3.4" fill="${v.interpolado?'#fff':color}" stroke="${color}" stroke-width="1.4"/>`;}}
-  this.svg.innerHTML=`<defs><clipPath id="${this.clipId}"><rect width="800" height="800"/></clipPath></defs><rect width="1000" height="950" fill="white"/><g transform="translate(90 50)"><rect width="800" height="800" fill="#fffde9"/><g clip-path="url(#${this.clipId})">${body}</g><rect width="800" height="800" fill="none" stroke="#3b4858" stroke-width="1.5"/>${labels}${text(400,870,'Temperatura (°C) · isotermas inclinadas')}${text(-10,-18,'hPa','end')}${this.layers.altitude?text(810,-18,'km ISA','start'):''}</g>`;
+  this.svg.innerHTML=`<defs><clipPath id="${this.clipId}"><rect width="800" height="800"/></clipPath></defs><rect width="1000" height="950" fill="white"/><g transform="translate(90 50)"><rect width="800" height="800" fill="#fffde9"/><g clip-path="url(#${this.clipId})">${body}</g><rect width="800" height="800" fill="none" stroke="#3b4858" stroke-width="1.5"/>${labels}${text(400,870,'Temperatura (°C)')}${text(-10,-18,'hPa','end')}${this.layers.altitude?text(810,-18,'km ISA','start'):''}</g>`;
  }
  inspect([x,y]){
   if(!this.points.length||x<0||x>800||y<0||y>800)return;
   const p=this.tr.inverse(x,y).p;
   const v=this.points.reduce((a,b)=>Math.abs(Math.log(b.p/p))<Math.abs(Math.log(a.p/p))?b:a);
-  const h=valid(v.z)?`${Math.round(v.z)} m s.n.m.`:`≈ ${Math.round(v.z_ref)} m (referencia)`;
-  this.readout.textContent=`Nivel próximo: ${v.p.toFixed(0)} hPa · ${h} · T ${v.t.toFixed(1)} °C · Td ${v.td.toFixed(1)} °C${v.interpolado?' · incluye interpolación local':''}${v.presion_estimada?' · presión estimada':''}`;
+  const h=valid(v.z)?`${Math.round(v.z)}m`:`≈${Math.round(v.z_ref)}m`;
+  const humidity=valid(v.rh)?`${Math.round(v.rh)}%`:'—';
+  this.readout.textContent=`Nivel seleccionado: ${v.p.toFixed(0)}hPa · ${h} · Td ${v.td.toFixed(1)}°C · T ${v.t.toFixed(1)}°C · H ${humidity}`;
  }
 }
 root.SkewTCore={Transform,altitude,pressure,esat,mixing,os,tsa,tmr};root.SkewT=SkewT;
