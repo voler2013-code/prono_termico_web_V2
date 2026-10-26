@@ -19,6 +19,29 @@ Descripción:
     sin logaritmos, imitando un diagrama skew‑T.
 
 """
+# -*- coding: utf-8 -*-
+"""
+Script: prono_termico3.py
+Pronóstico térmico usando Open-Meteo (API gratuita).
+Velocidad en la tabla m/s: ascenso NETO estimado para parapente.
+Se resta un hundimiento constante de 1.1 m/s a la velocidad del aire.
+Modelos: icon_seamless, gfs_seamless, meteofrance_seamless, ecmwf_ifs025,
+         ukmo_seamless, gem_seamless, cma_grapes_global
+
+
+Descripción:
+  - Interpreta una consulta flexible tipo: "hoy; 15hs; cuchi" o
+    "01-12-2025; 14hs; -31,55; -64,33; -9; 25"
+  - Llama a múltiples modelos de Open-Meteo.
+  - Maximiza la resolución vertical agregando niveles intermedios.
+  - Interpola linealmente los datos faltantes por modelo.
+  - Calcula medianas y desviaciones estándar por altura.
+  - Calcula rocío con Magnus y velocidad según Predelli (sin valores absolutos).
+  - Resta 1.1 m/s de hundimiento a cada modelo ANTES de mediana y sigma.
+  - Dibuja un sondeo ASCII con pendientes basadas en ΔT_normalizada,
+    sin logaritmos, imitando un diagrama skew‑T.
+
+"""
 
 import sys
 import os
@@ -38,6 +61,10 @@ def hoy_argentina():
     return datetime.now(timezone(timedelta(hours=-3))).date()
 
 TZ = "America/Argentina/Buenos_Aires"  # UTC-3 todo el año, sin horario de verano
+
+# Tasa media supuesta del parapente al girar en aire en calma (m/s).
+# Si cambia el equipo o el radio de giro, ajustar este valor.
+HUNDIMIENTO_PARAPENTE = 1.1
 
 # ---------------------------------------------------------------------
 # Ancho del sondeo ASCII: se adapta a la terminal para no cortar línea.
@@ -297,18 +324,38 @@ def valor_valido(x: Any) -> bool:
     return math.isfinite(xf)
 
 def dewpoint_from_T_RH(T: float, RH: float) -> Optional[float]:
-    if T is None or RH is None:
-        return None
+    """Punto de rocío (°C), aproximación de Magnus sobre agua.
 
+    Sustituye T + 35*log10(HR/100), muy imprecisa con aire seco.
+    """
     if not valor_valido(T) or not valor_valido(RH):
         return None
 
-    if RH <= 0:
+    T, RH = float(T), float(RH)
+    if not 0 < RH <= 100:
         return None
 
+    a = 17.62
+    b = 243.12
     try:
-        return float(T) + 35.0 * math.log10(float(RH) / 100.0)
-    except Exception:
+        gamma = math.log(RH / 100.0) + (a * T) / (b + T)
+        return (b * gamma) / (a - gamma)
+    except (ValueError, ZeroDivisionError, OverflowError):
+        return None
+
+
+def humedad_desde_T_Td(T: float, Td: float) -> Optional[float]:
+    """HR coherente con T y Td de superficie introducidos manualmente."""
+    if not valor_valido(T) or not valor_valido(Td):
+        return None
+
+    T, Td = float(T), float(Td)
+    a = 17.62
+    b = 243.12
+    try:
+        gamma = (a * Td / (b + Td)) - (a * T / (b + T))
+        return max(0.0, min(100.0, 100.0 * math.exp(gamma)))
+    except (ValueError, ZeroDivisionError, OverflowError):
         return None
 
 # Cache de datos por lugar/fecha/modelo. Permite consultar varias horas
@@ -669,18 +716,27 @@ def procesar_consulta(query: str):
     td2m_out = td_custom if td_custom is not None else stats_por_altura[2]["Td_mean"]
     t2m_out = t_custom if t_custom is not None else stats_por_altura[2]["T_mean"]
     rh2m_out = stats_por_altura[2]["RH_median"]
+    if td_custom is not None or t_custom is not None:
+        # En la tabla del suelo, HR debe coincidir con Td/T manuales.
+        rh2m_out = humedad_desde_T_Td(t2m_out, td2m_out)
 
     def veloc_termica(RocioTermica: float, Rocio: float, Temp: float) -> Optional[float]:
-        try:
-            num = (1.1 ** abs(RocioTermica - Rocio)) - 1.0
-            den = 1.1 ** abs(Temp - Rocio)
+        """Predelli: velocidad ascendente del AIRE (m/s), antes del hundimiento.
 
+        No usar abs(): invierte una diferencia negativa de humedad.
+        Si el rocío de la térmica no supera al ambiente, el modelo
+        no predice ascenso positivo por este mecanismo: w=0.
+        """
+        try:
+            diferencia = RocioTermica - Rocio
+            if diferencia <= 0:
+                return 0.0
+            num = 1.1 ** diferencia - 1.0
+            den = 1.1 ** (Temp - Rocio)
             if den <= 0:
                 return None
-
-            return 5.6 * math.sqrt(max(0.0, num / den))
-
-        except Exception:
+            return 5.6 * math.sqrt(num / den)
+        except (ValueError, ZeroDivisionError, OverflowError):
             return None
 
     alturas_ordenadas = [h for h in sorted(por_altura.keys()) if h > elevation]
@@ -700,7 +756,7 @@ def procesar_consulta(query: str):
         for modelo in modelos_data.keys():
             td2m_por_modelo[modelo] = stats_por_altura[2]["Td_mean"]
 
-    for idx_alt, altura_m in enumerate(alturas_ordenadas):
+    for altura_m in alturas_ordenadas:
         v_vals: List[float] = []
 
         T_por_modelo = {
@@ -732,13 +788,13 @@ def procesar_consulta(query: str):
             if not valor_valido(Td2m) or not valor_valido(Td_h) or not valor_valido(T_h):
                 continue
 
-            RocioTermica = (
-                Td2m
-                if idx_alt == 0
-                else Td2m - ((altura_m - elevation) * 0.0018)
-            )
+            # Mantener el gradiente original de 1.8 °C/km en todas
+            # las alturas, incluido el primer nivel sobre el suelo.
+            RocioTermica = float(Td2m) - ((altura_m - elevation) * 0.0018)
 
-            v = veloc_termica(float(RocioTermica), float(Td_h), float(T_h))
+            w_aire = veloc_termica(RocioTermica, float(Td_h), float(T_h))
+            # NETO: no recortar a cero, para mostrar hundimiento posible.
+            v = (w_aire - HUNDIMIENTO_PARAPENTE) if w_aire is not None else None
 
             if v is not None and valor_valido(v):
                 v_vals.append(v)
